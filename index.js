@@ -14,8 +14,9 @@ module.exports = class Cache extends Module {
             "enabled": false,
             "prefix": "prod_",
             "host": "localhost",
+            "password": null,
             "port": 6379,
-            "db": 1,
+            "db": null,
             "caches": {
                 "default": {
                     "expires": 3600
@@ -30,7 +31,12 @@ module.exports = class Cache extends Module {
             this.connected = false;
 
             if (this.config.enabled) {
-                this.redis = redis.createClient(this.config.port, this.config.host);
+                this.redis = redis.createClient({
+                    host: this.config.host,
+                    port: this.config.port,
+                    password: this.config.password,
+                    db: this.config.db
+                });
                 this.redis.select(this.config.db);
                 this.redis.on("error", (err) => {
                     this.log.error(err);
