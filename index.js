@@ -33,6 +33,9 @@ module.exports = class Cache extends Module {
             if (this.config.enabled) {
                 this.redis = redis.createClient({
                     host: this.config.host,
+                    retry_strategy: function (options) {
+                        return 1000;
+                    },
                     port: this.config.port,
                     password: this.config.password,
                     db: this.config.db
