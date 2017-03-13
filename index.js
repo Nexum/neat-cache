@@ -69,6 +69,31 @@ module.exports = class Cache extends Module {
         return hash.digest("hex");
     }
 
+    getSync(key) {
+        let makeMeLookSync = fn => {
+            let iterator = fn();
+            let loop = result => {
+                !result.done && result.value.then(
+                    res => loop(iterator.next(res)),
+                    err => loop(iterator.throw(err))
+                );
+            };
+
+            loop(iterator.next());
+        };
+
+        var self = this;
+        return makeMeLookSync(function* () {
+            try {
+                let result = yield self.get(key);
+
+                return result;
+            } catch (err) {
+                throw err;
+            }
+        })
+    }
+
     get(key) {
         return new Promise((resolve, reject) => {
             if (!this.config.enabled || !this.connected) {
@@ -92,6 +117,31 @@ module.exports = class Cache extends Module {
                 }
             });
         });
+    }
+
+    setSync(key, val, options) {
+        let makeMeLookSync = fn => {
+            let iterator = fn();
+            let loop = result => {
+                !result.done && result.value.then(
+                    res => loop(iterator.next(res)),
+                    err => loop(iterator.throw(err))
+                );
+            };
+
+            loop(iterator.next());
+        };
+
+        var self = this;
+        return makeMeLookSync(function* () {
+            try {
+                let result = yield self.set(key, val, options);
+
+                return result;
+            } catch (err) {
+                throw err;
+            }
+        })
     }
 
     set(key, val, options) {
@@ -122,11 +172,14 @@ module.exports = class Cache extends Module {
             }
 
             this.redis.set(key, jsonVal);
-            this.redis.expire(key, options.expires, (err) => {
-                if (err) {
-                    this.log.error("Error while setting expire time of " + key + " to " + options.expires + ": " + err.toString());
-                }
-            });
+
+            if (options && options.expire) {
+                this.redis.expire(key, options.expires, (err) => {
+                    if (err) {
+                        this.log.error("Error while setting expire time of " + key + " to " + options.expires + ": " + err.toString());
+                    }
+                });
+            }
 
             return resolve(val);
         });
