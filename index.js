@@ -31,7 +31,7 @@ module.exports = class Cache extends Module {
             this.connected = false;
 
             if (this.config.enabled) {
-                this.redis = redis.createClient({
+                let options = {
                     host: this.config.host,
                     retry_strategy: function (options) {
                         return 1000;
@@ -39,7 +39,13 @@ module.exports = class Cache extends Module {
                     port: this.config.port,
                     password: this.config.password,
                     db: this.config.db
-                });
+                };
+
+                if (!this.config.password) {
+                    delete options.password;
+                }
+
+                this.redis = redis.createClient(options);
                 this.redis.select(this.config.db);
                 this.redis.on("error", (err) => {
                     this.log.error(err);
@@ -69,38 +75,15 @@ module.exports = class Cache extends Module {
         return hash.digest("hex");
     }
 
-    getSync(key) {
-        let makeMeLookSync = fn => {
-            let iterator = fn();
-            let loop = result => {
-                !result.done && result.value.then(
-                    res => loop(iterator.next(res)),
-                    err => loop(iterator.throw(err))
-                );
-            };
-
-            loop(iterator.next());
-        };
-
-        var self = this;
-        return makeMeLookSync(function* () {
-            try {
-                let result = yield self.get(key);
-
-                return result;
-            } catch (err) {
-                throw err;
-            }
-        })
-    }
-
     get(key) {
         return new Promise((resolve, reject) => {
+            console.log("GET 1");
             if (!this.config.enabled || !this.connected) {
                 return resolve();
             }
 
             return this.redis.get(key, (err, data) => {
+                console.log("GET 3");
                 if (err) {
                     return reject(err);
                 }
@@ -115,33 +98,9 @@ module.exports = class Cache extends Module {
                     this.log.error(e);
                     resolve();
                 }
+                console.log("GET 4");
             });
         });
-    }
-
-    setSync(key, val, options) {
-        let makeMeLookSync = fn => {
-            let iterator = fn();
-            let loop = result => {
-                !result.done && result.value.then(
-                    res => loop(iterator.next(res)),
-                    err => loop(iterator.throw(err))
-                );
-            };
-
-            loop(iterator.next());
-        };
-
-        var self = this;
-        return makeMeLookSync(function* () {
-            try {
-                let result = yield self.set(key, val, options);
-
-                return result;
-            } catch (err) {
-                throw err;
-            }
-        })
     }
 
     set(key, val, options) {
