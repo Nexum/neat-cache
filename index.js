@@ -77,13 +77,11 @@ module.exports = class Cache extends Module {
 
     get(key) {
         return new Promise((resolve, reject) => {
-            console.log("GET 1");
             if (!this.config.enabled || !this.connected) {
                 return resolve();
             }
 
             return this.redis.get(key, (err, data) => {
-                console.log("GET 3");
                 if (err) {
                     return reject(err);
                 }
@@ -98,7 +96,6 @@ module.exports = class Cache extends Module {
                     this.log.error(e);
                     resolve();
                 }
-                console.log("GET 4");
             });
         });
     }
