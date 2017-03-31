@@ -6,6 +6,7 @@ var redis = require("redis");
 var Promise = require("bluebird");
 var crypto = require('crypto');
 var request = require('request');
+const apeStatus = require('ape-status');
 
 module.exports = class Cache extends Module {
 
@@ -16,7 +17,7 @@ module.exports = class Cache extends Module {
             "host": "localhost",
             "password": null,
             "port": 6379,
-            "db": null,
+            "db": 0,
             "caches": {
                 "default": {
                     "expires": 3600
@@ -29,16 +30,18 @@ module.exports = class Cache extends Module {
         return new Promise((resolve, reject) => {
             this.log.debug("Initializing...");
             this.connected = false;
+            let self = this;
 
             if (this.config.enabled) {
                 let options = {
                     host: this.config.host,
                     retry_strategy: function (options) {
+                        self.log.debug("Reconnecting to session redis in 1 second");
                         return 1000;
                     },
                     port: this.config.port,
                     password: this.config.password,
-                    db: this.config.db
+                    db: this.config.db || 0
                 };
 
                 if (!this.config.password) {
@@ -46,6 +49,8 @@ module.exports = class Cache extends Module {
                 }
 
                 this.redis = redis.createClient(options);
+                apeStatus.redis(this.redis, "cache");
+
                 this.redis.select(this.config.db);
                 this.redis.on("error", (err) => {
                     this.log.error(err);
